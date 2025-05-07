@@ -16,31 +16,33 @@ relay.value(0)  # relé je z prva vypnuté
 
 
 # Wi-Fi údaje
-ssid = 'REPLACE_WITH_YOUR_SSID' # nebo-li jméno sítě
-password = 'REPLACE_WITH_YOUR_PASSWORD' # heslo do té sítě 
+ssid = 'AndroidAP345' # nebo-li jméno sítě
+password = 'Suzibumi' # heslo do té sítě 
 
 # HTML template for the webpage
 def webpage(random_value):
     html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Web pro květináč</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-        </head>
-        <body>
-            <h1>Raspberry Pi Pico Web Server</h1>
-            <h2>Zalít rostlinu</h2>
-            <form action="./water">
-                <input type="submit" value="Zalít teď!" />
-            </form>
-            <h2>Fetch New Value</h2>
-            <form action="./value">
-                <input type="submit" value="Fetch value" />
-            </form>
-            <p>Fetched value: {random_value}</p>
-        </body>
-        </html>
+            <!DOCTYPE html>
+    <html lang="cs">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Web pro květináč</title>
+    </head>
+    <body>
+        <h1>Raspberry Pi Pico Web Server</h1>
+        <h2>Zalít rostlinu</h2>
+        <form action="/water">
+            <input type="submit" value="Zalít teď!" method="get"/>
+        </form>
+        <br>
+        <h2>Fetch New Value</h2>
+        <form action="/value">
+            <input type="submit" value="Fetch value" method="get"/>
+        </form>
+        <p>Fetched value: {random_value}</p>
+    </body>
+    </html>
         """
     return str(html)
 
@@ -87,8 +89,10 @@ while True:
         
         # Receive and parse the request
         request = conn.recv(1024)
+        print("Request raw:", repr(request))
         request = str(request)
         print('Request content = %s' % request)
+
 
         try:
             request = request.split()[1]
@@ -97,16 +101,9 @@ while True:
             pass
         
         # Process the request and update variables
-        if request == '/lighton?':
-            print("LED on")
-            led.value(1)
-            state = "ON"
-        elif request == '/lightoff?':
-            led.value(0)
-            state = 'OFF'
-        elif request == '/value?':
+        if request == '/value':
             random_value = random.randint(0, 20)
-        elif request == '/water?':
+        elif request == '/water':
             print("Zalévání spuštěno")
             relay.value(1)
             time.sleep(1)

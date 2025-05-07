@@ -8,13 +8,13 @@
 <body>
     <h1>Raspberry Pi Pico Web Server</h1>
     <h2>Zalít rostlinu</h2>
-    <form action="./water">
-        <input type="submit" value="Zalít teď!" />
+    <form action="/water">
+        <input type="submit" value="Zalít teď!" method="get"/>
     </form>
     <br>
     <h2>Fetch New Value</h2>
-    <form action="./value">
-        <input type="submit" value="Fetch value" />
+    <form action="/value">
+        <input type="submit" value="Fetch value" method="get"/>
     </form>
     <p>Fetched value: {random_value}</p>
 </body>
