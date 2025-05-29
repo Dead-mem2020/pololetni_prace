@@ -6,16 +6,26 @@
     <title>Web pro květináč</title>
 </head>
 <body>
-    <h1>Raspberry Pi Pico Web Server</h1>
-    <h2>Zalít rostlinu</h2>
-    <form action="/water">
-        <input type="submit" value="Zalít teď!" method="get"/>
-    </form>
-    <br>
-    <h2>Fetch New Value</h2>
-    <form action="/value">
-        <input type="submit" value="Fetch value" method="get"/>
-    </form>
-    <p>Fetched value: {random_value}</p>
+        <h1>Raspberry Pi Pico Web Server</h1>
+        <br>
+        <h2>Zap/Vyp květináč</h2>
+        <form action="/toggle">
+            <input type="submit" value="{toggle_text}" method="get"/>
+        </form>
+        <br>
+        <br>
+        <h3>Zalít rostlinu</h3>
+        <form action="/water">
+            <input type="submit" value="Zalít teď!" method="get"/>
+        </form>
+        <br>
+        <h3>Dostat nové hodnoty</h3>
+        <form action="/value">
+            <input type="submit" value="Získat hodnoty" method="get"/>
+        </form>
+        <p>Načtené hodnoty:</p> <br>
+        <p><strong>Půda: <strong> {soil}</p> <br>
+        <p><strong>Vlhkost vzduchu: <strong> {humidity}%</p> <br>
+        <p><strong>Teplota vzduchu: <strong> {temp}°C</p>
 </body>
 </html>

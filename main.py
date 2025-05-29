@@ -4,23 +4,30 @@
 import network
 import socket
 import time
-import random
 import dht
 from machine import Pin
 from machine import ADC
 
 # Create an LED object on pin 'LED'
-led = Pin('LED', Pin.OUT)
 relay = Pin(15, Pin.OUT)
 relay.value(0)  # relé je z prva vypnuté
+soil_sensor = ADC(Pin(26))
+soil = soil_sensor.read_u16()
+dht_sensor = dht.DHT11(Pin(14))
 
 
 # Wi-Fi údaje
 ssid = 'AndroidAP345' # nebo-li jméno sítě
 password = 'Suzibumi' # heslo do té sítě 
 
+auto_mode = False
+last_check = 0
+check_interval = 10
+
 # HTML template for the webpage
-def webpage(random_value):
+def webpage(soil, temp, humidity, auto):
+    auto_state = "Zapnutý" if auto else "Vypnutý"
+    toggle_text = "Vypnout auto-režim" if auto else "Zapnout auto-režim"
     html = f"""
             <!DOCTYPE html>
     <html lang="cs">
@@ -31,16 +38,26 @@ def webpage(random_value):
     </head>
     <body>
         <h1>Raspberry Pi Pico Web Server</h1>
-        <h2>Zalít rostlinu</h2>
+        <br>
+        <h2>Zap/Vyp květináč</h2>
+        <form action="/toggle">
+            <input type="submit" value="{toggle_text}" method="get"/>
+        </form>
+        <br>
+        <br>
+        <h3>Zalít rostlinu</h3>
         <form action="/water">
             <input type="submit" value="Zalít teď!" method="get"/>
         </form>
         <br>
-        <h2>Fetch New Value</h2>
+        <h3>Dostat nové hodnoty</h3>
         <form action="/value">
-            <input type="submit" value="Fetch value" method="get"/>
+            <input type="submit" value="Získat hodnoty" method="get"/>
         </form>
-        <p>Fetched value: {random_value}</p>
+        <p>Načtené hodnoty:</p> <br>
+        <p><strong>Půda: <strong> {soil}</p> <br>
+        <p><strong>Vlhkost vzduchu: <strong> {humidity}%</p> <br>
+        <p><strong>Teplota vzduchu: <strong> {temp}°C</p>
     </body>
     </html>
         """
@@ -77,47 +94,74 @@ s.listen()
 
 print('Listening on', addr)
 
-# Initialize variables
-state = "OFF"
-random_value = 0
+last_auto_water = time.ticks_ms()
+
+soil = "-"
+temp = "-"
+humidity = "-"
 
 # Main loop to listen for connections
 while True:
-    try:
-        conn, addr = s.accept()
-        print('Got a connection from', addr)
-        
-        # Receive and parse the request
-        request = conn.recv(1024)
-        print("Request raw:", repr(request))
-        request = str(request)
-        print('Request content = %s' % request)
 
+    if auto_mode = True
+        try time.ticks_diff(current_time, last_auto_water) > 10000:
+            soil_value = soil_sensor.read_u16()
+            if soil_value > 50000:
+                relay.value(1)
+                time.sleep(2)
+                relay.value(0)
+            last_auto_water = current_time
 
         try:
-            request = request.split()[1]
-            print('Request:', request)
-        except IndexError:
-            pass
-        
-        # Process the request and update variables
-        if request == '/value':
-            random_value = random.randint(0, 20)
-        elif request == '/water':
-            print("Zalévání spuštěno")
-            relay.value(1)
-            time.sleep(1)
-            relay.value(0)
+            conn, addr = s.accept()
+            print('Got a connection from', addr)
+            
+            # Receive and parse the request
+            request = conn.recv(1024)
+            print("Request raw:", repr(request))
+            request = str(request)
+            print('Request content = %s' % request)
 
 
-        # odpověď od HTML
-        response = webpage(random_value)  
+            try:
+                request = request.split()[1]
+                print('Request:', request)
+            except IndexError:
+                pass
+            
 
-        # Send the HTTP response and close the connection
-        conn.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-        conn.send(response)
-        conn.close()
+            if request == '/value':
+                soil = soil_sensor.read_u16()
 
-    except OSError as e:
-        conn.close()
-        print('Connection closed')
+                try:
+                    dht_sensor.measure()
+                    temp = dht_sensor.temperature()
+                    humidity = dht_sensor.humidity()
+                except Exception as e:
+                    print("DHT11 chyba:", e)
+                    temp = "chyba"
+                    humidity = "chyba"
+
+            elif request == '/water':
+                print("Zalévání spuštěno")
+                relay.value(1)
+                time.sleep(1)
+                relay.value(0)
+
+
+            # odpověď od HTML
+            response = webpage(soil)
+            response = webpage(temp)
+            response = webpage(humidity)  
+
+            # Send the HTTP response and close the connection
+            conn.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+            conn.send(response)
+            conn.close()
+
+        except OSError as e:
+            conn.close()
+            print('Connection closed')
+
+        else:
+            break
