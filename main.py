@@ -29,35 +29,60 @@ def webpage(soil, temp, humidity, auto):
     auto_state = "Zapnutý" if auto else "Vypnutý"
     toggle_text = "Vypnout auto-režim" if auto else "Zapnout auto-režim"
     html = f"""
-            <!DOCTYPE html>
+                <!DOCTYPE html>
     <html lang="cs">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="style.css">
         <title>Web pro květináč</title>
+
+        <style>
+                    h1, h2 {{
+                font-size: clamp(28px, 8vw, 30px);
+                text-align: center;
+            }}
+
+            h3{{
+                font-size: clamp(23px, 5vw, 26px);
+                text-align: center;
+            }}
+
+            form{{
+                font-size: 1vw;
+                display: block;
+                margin: auto;
+            }}
+
+            p{{
+                text-align: center;
+                font-size: clamp(18px, 3vw, 21px);
+            }}
+        </style>
+
     </head>
     <body>
-        <h1>Raspberry Pi Pico Web Server</h1>
-        <br>
-        <h2>Zap/Vyp květináč</h2>
-        <form action="/toggle">
-            <input type="submit" value="{toggle_text}" method="get"/>
-        </form>
-        <br>
-        <br>
-        <h3>Zalít rostlinu</h3>
-        <form action="/water">
-            <input type="submit" value="Zalít teď!" method="get"/>
-        </form>
-        <br>
-        <h3>Dostat nové hodnoty</h3>
-        <form action="/value">
-            <input type="submit" value="Získat hodnoty" method="get"/>
-        </form>
-        <p>Načtené hodnoty:</p> <br>
-        <p><strong>Půda: <strong> {soil}</p> <br>
-        <p><strong>Vlhkost vzduchu: <strong> {humidity}%</p> <br>
-        <p><strong>Teplota vzduchu: <strong> {temp}°C</p>
+            <h1>Raspberry Pi Pico Web Server</h1>
+            <br>
+            <h2>Zap/Vyp květináč</h2>
+            <form action="/toggle">
+                <input type="submit" value="{toggle_text}" method="get"/>
+            </form>
+            <br>
+            <br>
+            <h3>Zalít rostlinu</h3>
+            <form action="/water">
+                <input type="submit" value="Zalít teď!" method="get"/>
+            </form>
+            <br>
+            <h3>Dostat nové hodnoty</h3>
+            <form action="/value">
+                <input type="submit" value="Získat hodnoty" method="get"/>
+            </form>
+            <p>Načtené hodnoty:</p> <br>
+            <p><strong>Půda: <strong> {soil}</p> <br>
+            <p><strong>Vlhkost vzduchu: <strong> {humidity}%</p> <br>
+            <p><strong>Teplota vzduchu: <strong> {temp}°C</p>
     </body>
     </html>
         """
@@ -96,43 +121,45 @@ print('Listening on', addr)
 
 last_auto_water = time.ticks_ms()
 
-soil = "-"
+soil = 0
 temp = "-"
 humidity = "-"
 
 # Main loop to listen for connections
 while True:
+    try:
+        conn, addr = s.accept()
+        print('Got a connection from', addr)
 
-    if auto_mode = True
-        try time.ticks_diff(current_time, last_auto_water) > 10000:
+        request = conn.recv(1024)
+        print("Request raw:", repr(request))
+        request = str(request)
+        print('Request content = %s' % request)
+
+        try:
+            request = request.split()[1]
+            print('Request:', request)
+        except IndexError:
+            request = '/'  # když je něco divně, nastavíme na "/"
+
+        # automatické zalévání mimo request blok
+        current_time = time.ticks_ms()
+        if auto_mode and time.ticks_diff(current_time, last_auto_water) > 10000:
             soil_value = soil_sensor.read_u16()
             if soil_value > 50000:
                 relay.value(1)
                 time.sleep(2)
                 relay.value(0)
-            last_auto_water = current_time
+                last_auto_water = current_time
 
-        try:
-            conn, addr = s.accept()
-            print('Got a connection from', addr)
-            
-            # Receive and parse the request
-            request = conn.recv(1024)
-            print("Request raw:", repr(request))
-            request = str(request)
-            print('Request content = %s' % request)
+        # výchozí hodnoty, abychom předešli chybě
+        soil = 0
+        temp = "-"
+        humidity = "-"
 
-
-            try:
-                request = request.split()[1]
-                print('Request:', request)
-            except IndexError:
-                pass
-            
-
-            if request == '/value':
+        if auto_mode:
+            if request == '/' or request == '/value':
                 soil = soil_sensor.read_u16()
-
                 try:
                     dht_sensor.measure()
                     temp = dht_sensor.temperature()
@@ -148,20 +175,20 @@ while True:
                 time.sleep(1)
                 relay.value(0)
 
+            elif request == '/toggle':
+                auto_mode = not auto_mode
 
-            # odpověď od HTML
-            response = webpage(soil)
-            response = webpage(temp)
-            response = webpage(humidity)  
+        # vygeneruj odpověď
+        response = webpage(soil, temp, humidity, auto_mode)
 
-            # Send the HTTP response and close the connection
-            conn.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-            conn.send(response)
+        # odešli odpověď
+        conn.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+        conn.send(response)
+        conn.close()
+
+    except OSError as e:
+        print("Chyba připojení:", e)
+        try:
             conn.close()
-
-        except OSError as e:
-            conn.close()
-            print('Connection closed')
-
-        else:
-            break
+        except:
+            pass
