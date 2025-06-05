@@ -6,7 +6,7 @@ from machine import Pin
 from machine import ADC
 
 
-relay = Pin(2, Pin.OUT)
+relay = Pin(3, Pin.OUT)
 relay.value(0)
 soil_sensor = ADC(Pin(26))
 soil = soil_sensor.read_u16()
