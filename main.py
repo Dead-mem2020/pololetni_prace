@@ -1,6 +1,3 @@
-# Complete project details at https://RandomNerdTutorials.com/raspberry-pi-pico-web-server-micropython/
-
-# Importování modulů
 import network
 import socket
 import time
@@ -8,23 +5,22 @@ import dht
 from machine import Pin
 from machine import ADC
 
-# Create an LED object on pin 'LED'
-relay = Pin(15, Pin.OUT)
-relay.value(0)  # relé je z prva vypnuté
+
+relay = Pin(2, Pin.OUT)
+relay.value(0)
 soil_sensor = ADC(Pin(26))
 soil = soil_sensor.read_u16()
-dht_sensor = dht.DHT11(Pin(14))
+dht_sensor = dht.DHT11(Pin(1))
 
 
-# Wi-Fi údaje
-ssid = 'AndroidAP345' # nebo-li jméno sítě
-password = 'Suzibumi' # heslo do té sítě 
+ssid = 'AndroidAP345' 
+password = 'Suzibumi' 
 
 auto_mode = False
+last_auto_water = time.ticks_ms()
 last_check = 0
-check_interval = 10
+check_interval = 10 
 
-# HTML template for the webpage
 def webpage(soil, temp, humidity, auto):
     auto_state = "Zapnutý" if auto else "Vypnutý"
     toggle_text = "Vypnout auto-režim" if auto else "Zapnout auto-režim"
@@ -34,7 +30,6 @@ def webpage(soil, temp, humidity, auto):
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="style.css">
         <title>Web pro květináč</title>
 
         <style>
@@ -49,9 +44,12 @@ def webpage(soil, temp, humidity, auto):
             }}
 
             form{{
-                font-size: 1vw;
-                display: block;
-                margin: auto;
+                display: grid;
+            }}
+
+            form:active{{
+                color: white;
+                background-color: green;
             }}
 
             p{{
@@ -79,8 +77,8 @@ def webpage(soil, temp, humidity, auto):
             <form action="/value">
                 <input type="submit" value="Získat hodnoty" method="get"/>
             </form>
-            <p>Načtené hodnoty:</p> <br>
-            <p><strong>Půda: <strong> {soil}</p> <br>
+            <br>
+            <p><strong>Vlhkost půdy: <strong> {soil}</p> <br>
             <p><strong>Vlhkost vzduchu: <strong> {humidity}%</p> <br>
             <p><strong>Teplota vzduchu: <strong> {temp}°C</p>
     </body>
@@ -88,13 +86,11 @@ def webpage(soil, temp, humidity, auto):
         """
     return str(html)
 
-# Connect to WLAN
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 wlan.connect(ssid, password)
 
-# Wait for Wi-Fi connection
-connection_timeout = 10
+connection_timeout = 20
 while connection_timeout > 0:
     if wlan.status() >= 3:
         break
@@ -102,7 +98,6 @@ while connection_timeout > 0:
     print('Waiting for Wi-Fi connection...')
     time.sleep(1)
 
-# Check if connection is successful
 if wlan.status() != 3:
     raise RuntimeError('Failed to establish a network connection')
 else:
@@ -110,7 +105,6 @@ else:
     network_info = wlan.ifconfig()
     print('IP address:', network_info[0])
 
-# Set up socket and start listening
 addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
 s = socket.socket()
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -119,14 +113,22 @@ s.listen()
 
 print('Listening on', addr)
 
-last_auto_water = time.ticks_ms()
 
-soil = 0
-temp = "-"
-humidity = "-"
-
-# Main loop to listen for connections
 while True:
+
+    soil = soil_sensor.read_u16()
+    current_time = time.ticks_ms()
+    temp = dht_sensor.temperature()
+    humidity = dht_sensor.humidity()
+    
+
+    if auto_mode is True and time.ticks_diff(current_time, last_auto_water) > 10000:
+            if soil > 50000:
+                relay.value(1)
+                if soil > 45000:
+                    relay.value(0)
+                    last_auto_water = current_time
+
     try:
         conn, addr = s.accept()
         print('Got a connection from', addr)
@@ -140,48 +142,41 @@ while True:
             request = request.split()[1]
             print('Request:', request)
         except IndexError:
-            request = '/'  # když je něco divně, nastavíme na "/"
+            request = '/'
 
-        # automatické zalévání mimo request blok
-        current_time = time.ticks_ms()
-        if auto_mode and time.ticks_diff(current_time, last_auto_water) > 10000:
-            soil_value = soil_sensor.read_u16()
-            if soil_value > 50000:
-                relay.value(1)
-                time.sleep(2)
-                relay.value(0)
-                last_auto_water = current_time
 
-        # výchozí hodnoty, abychom předešli chybě
-        soil = 0
-        temp = "-"
-        humidity = "-"
-
-        if auto_mode:
-            if request == '/' or request == '/value':
+        if request == '/' or request == '/value':
+            try:
                 soil = soil_sensor.read_u16()
-                try:
-                    dht_sensor.measure()
-                    temp = dht_sensor.temperature()
-                    humidity = dht_sensor.humidity()
-                except Exception as e:
-                    print("DHT11 chyba:", e)
-                    temp = "chyba"
-                    humidity = "chyba"
 
-            elif request == '/water':
-                print("Zalévání spuštěno")
-                relay.value(1)
-                time.sleep(1)
-                relay.value(0)
+            except Exception as e:
+                print("Soil chyba:", e)
+                soil = "chyba"
 
-            elif request == '/toggle':
-                auto_mode = not auto_mode
+            try:
+                dht_sensor.measure()
+                temp = dht_sensor.temperature()
+                humidity = dht_sensor.humidity()
 
-        # vygeneruj odpověď
+            except Exception as e:
+                print("DHT11 chyba:", e)
+                temp = "chyba"
+                humidity = "chyba"
+
+        if request == '/water':
+            relay.value(1)
+            time.sleep(1)
+            relay.value(0)
+
+        elif request == '/toggle':
+            auto_mode = not auto_mode
+            print("Režim přepnutý")
+            print("Režim nyní: ", auto_mode)
+            
+
         response = webpage(soil, temp, humidity, auto_mode)
 
-        # odešli odpověď
+
         conn.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
         conn.send(response)
         conn.close()

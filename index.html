@@ -1,56 +1,58 @@
 <!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>Web pro květináč</title>
+    <html lang="cs">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Web pro květináč</title>
 
-    <style>
-            h1, h2 {
-        font-size: 2vw;
-        text-align: center;
-    }
+        <style>
+                    h1, h2 {
+                font-size: clamp(28px, 8vw, 30px);
+                text-align: center;
+            }
 
-    h3{
-        font-size: 2vw;
-        text-align: center;
-    }
+            h3{
+                font-size: clamp(23px, 5vw, 26px);
+                text-align: center;
+            }
 
-    form{
-        font-size: 1vw;
-        display: block;
-        margin: auto;
-    }
+            form{
+                display: grid;
+            }
 
-    p{
-        text-align: center;
-        font-size: 1.4vw;
-    }
-    </style>
+            form:active{
+                color: white;
+                background-color: green;
+            }
 
-</head>
-<body>
-        <h1>Raspberry Pi Pico Web Server</h1>
-        <br>
-        <h2>Zap/Vyp květináč</h2>
-        <form action="/toggle">
-            <input type="submit" value="{toggle_text}" method="get"/>
-        </form>
-        <br>
-        <br>
-        <h3>Zalít rostlinu</h3>
-        <form action="/water">
-            <input type="submit" value="Zalít teď!" method="get"/>
-        </form>
-        <br>
-        <h3>Dostat nové hodnoty</h3>
-        <form action="/value">
-            <input type="submit" value="Získat hodnoty" method="get"/>
-        </form>
-        <p>Načtené hodnoty:</p> <br>
-        <p><strong>Půda: <strong> {soil}</p> <br>
-        <p><strong>Vlhkost vzduchu: <strong> {humidity}%</p> <br>
-        <p><strong>Teplota vzduchu: <strong> {temp}°C</p>
-</body>
-</html>
+            p{
+                text-align: center;
+                font-size: clamp(18px, 3vw, 21px);
+            }
+        </style>
+
+    </head>
+    <body>
+            <h1>Raspberry Pi Pico Web Server</h1>
+            <br>
+            <h2>Zap/Vyp květináč</h2>
+            <form action="/toggle">
+                <input type="submit" value="{toggle_text}" method="get"/>
+            </form>
+            <br>
+            <br>
+            <h3>Zalít rostlinu</h3>
+            <form action="/water">
+                <input type="submit" value="Zalít teď!" method="get"/>
+            </form>
+            <br>
+            <h3>Dostat nové hodnoty</h3>
+            <form action="/value">
+                <input type="submit" value="Získat hodnoty" method="get"/>
+            </form>
+            <br>
+            <p><strong>Vlhkost půdy: <strong> {soil}</p> <br>
+            <p><strong>Vlhkost vzduchu: <strong> {humidity}%</p> <br>
+            <p><strong>Teplota vzduchu: <strong> {temp}°C</p>
+    </body>
+    </html>
